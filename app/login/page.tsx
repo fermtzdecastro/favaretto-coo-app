@@ -1,6 +1,11 @@
+import { redirect } from "next/navigation";
+import { getSessionUser } from "@/lib/auth";
 import { LoginForm } from "@/components/forms/LoginForm";
 
-export default function LoginPage() {
+export default async function LoginPage() {
+  const usuario = await getSessionUser();
+  if (usuario) redirect("/finanzas");
+
   return (
     <main className="flex min-h-screen items-center justify-center bg-cream px-4">
       <div className="w-full max-w-sm">
