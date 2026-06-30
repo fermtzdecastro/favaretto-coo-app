@@ -22,8 +22,8 @@ export function LoginForm() {
       password,
     });
 
-    if (authError) {
-      setError("Correo o contraseña incorrectos.");
+   if (authError) {
+      setError(authError.message);
       setLoading(false);
       return;
     }
