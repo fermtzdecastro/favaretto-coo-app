@@ -46,6 +46,8 @@ export function GastosTable({ gastosFijos, mes, onTotalChange }: GastosTableProp
   const [adicFijosMonto, setAdicFijosMonto] = useState<Record<string, number>>({});
   const [adicVarsNombre, setAdicVarsNombre] = useState<Record<string, string>>({});
   const [adicVarsMonto, setAdicVarsMonto] = useState<Record<string, number>>({});
+  const [diariosPorConceptoState, setDiariosPorConceptoState] = useState<Record<string, number>>({});
+  const [otrosDiarios, setOtrosDiarios] = useState(0);
 
   useEffect(() => {
     async function cargarDatos() {
@@ -55,6 +57,30 @@ export function GastosTable({ gastosFijos, mes, onTotalChange }: GastosTableProp
         .eq('mes', mes);
 
       if (!data) return;
+
+      const [anio, mesNum] = mes.split('-').map(Number);
+      const pad = (n: number) => String(n).padStart(2, '0');
+const mesFin = mesNum === 12 ? `${anio + 1}-01-01` : `${anio}-${pad(mesNum + 1)}-01`;
+const { data: diarios } = await supabase
+        .from('gastos_diarios')
+        .select('concepto, monto')
+        .gte('fecha', mes)
+        .lt('fecha', mesFin);
+
+      const diariosPorConcepto: Record<string, number> = {};
+      let totalOtros = 0;
+      (diarios ?? []).forEach((g: any) => {
+        const esFijoConocido = gastosFijos.find(gf => gf.concepto === g.concepto);
+        const esVarConocido = VARIABLES_BASE.find(v => v.concepto === g.concepto);
+        if (esFijoConocido || esVarConocido) {
+          diariosPorConcepto[g.concepto] = (diariosPorConcepto[g.concepto] ?? 0) + Number(g.monto);
+        } else {
+          totalOtros += Number(g.monto);
+        }
+      });
+      console.log('DEBUG CONCEPTOS:', { diariosPorConcepto, gastosFijosConceptos: gastosFijos.map(g => JSON.stringify(g.concepto)) });
+      setDiariosPorConceptoState(diariosPorConcepto);
+      setOtrosDiarios(totalOtros);
 
       const nuevosFijosReal: Record<string, number> = { ...Object.fromEntries(gastosFijos.map(g => [g.concepto, g.monto_mensual])) };
       const nuevosVars: Record<string, number> = {};
@@ -93,17 +119,16 @@ export function GastosTable({ gastosFijos, mes, onTotalChange }: GastosTableProp
       { onConflict: 'mes,concepto' }
     );
   }
-
-  const subtotalFijosPresupuestado = gastosFijos.reduce((s, g) => s + g.monto_mensual, 0);
-  const subtotalFijosReal = gastosFijos.reduce((s, g) => s + (fijosReal[g.concepto] ?? g.monto_mensual), 0)
+const subtotalFijosPresupuestado = gastosFijos.reduce((s, g) => s + g.monto_mensual, 0);
+  const subtotalFijosReal = gastosFijos.reduce((s, g) => s + (fijosReal[g.concepto] ?? g.monto_mensual) + (diariosPorConceptoState[g.concepto] ?? 0), 0)
     + Object.values(adicFijosMonto).reduce((s, v) => s + v, 0);
 
   const subtotalVarsPresupuestado = VARIABLES_BASE.reduce((s, v) => s + v.presupuestado, 0);
-  const subtotalVarsReal = VARIABLES_BASE.reduce((s, v) => s + (variablesReal[v.concepto] ?? 0), 0)
+  const subtotalVarsReal = VARIABLES_BASE.reduce((s, v) => s + (variablesReal[v.concepto] ?? 0) + (diariosPorConceptoState[v.concepto] ?? 0), 0)
     + Object.values(adicVarsMonto).reduce((s, v) => s + v, 0);
 
   const totalPresupuestado = subtotalFijosPresupuestado + subtotalVarsPresupuestado;
-  const totalReal = subtotalFijosReal + subtotalVarsReal;
+  const totalReal = subtotalFijosReal + subtotalVarsReal + otrosDiarios;
 
   useEffect(() => {
     onTotalChange?.(totalReal);
@@ -138,8 +163,11 @@ export function GastosTable({ gastosFijos, mes, onTotalChange }: GastosTableProp
                   onChange={e => setFijosReal(prev => ({ ...prev, [g.concepto]: Number(e.target.value) }))}
                   onBlur={e => saveGasto(g.concepto, Number(e.target.value))}
                 />
+                {diariosPorConceptoState[g.concepto] > 0 && (
+                  <div className="text-xs text-gray-400">+{formatearMXN(diariosPorConceptoState[g.concepto])} registrado</div>
+                )}
               </td>
-              <td className={tdClass}><Delta presupuestado={g.monto_mensual} real={fijosReal[g.concepto] ?? g.monto_mensual} /></td>
+             <td className={tdClass}><Delta presupuestado={g.monto_mensual} real={(fijosReal[g.concepto] ?? g.monto_mensual) + (diariosPorConceptoState[g.concepto] ?? 0)} /></td>
             </tr>
           ))}
           {ADIC_FIJOS.map((key, i) => (
@@ -175,13 +203,16 @@ export function GastosTable({ gastosFijos, mes, onTotalChange }: GastosTableProp
               <td className={tdClass}>{v.concepto}</td>
               <td className={tdClass}>{formatearMXN(v.presupuestado)}</td>
               <td className={tdClass}>
-                <input className={inputClass} type="number" placeholder="$0"
+               <input className={inputClass} type="number" placeholder="$0"
                   value={variablesReal[v.concepto] ?? ''}
                   onChange={e => setVariablesReal(prev => ({ ...prev, [v.concepto]: Number(e.target.value) }))}
                   onBlur={e => saveGasto(v.concepto, Number(e.target.value))}
                 />
+                {diariosPorConceptoState[v.concepto] > 0 && (
+                  <div className="text-xs text-gray-400">+{formatearMXN(diariosPorConceptoState[v.concepto])} registrado</div>
+                )}
               </td>
-              <td className={tdClass}><Delta presupuestado={v.presupuestado} real={variablesReal[v.concepto] ?? null} /></td>
+              <td className={tdClass}><Delta presupuestado={v.presupuestado} real={(variablesReal[v.concepto] ?? 0) + (diariosPorConceptoState[v.concepto] ?? 0)} /></td>
             </tr>
           ))}
           {ADIC_VARS.map((key, i) => (
@@ -210,6 +241,14 @@ export function GastosTable({ gastosFijos, mes, onTotalChange }: GastosTableProp
             <td className={tdClass}>{formatearMXN(subtotalVarsReal)}</td>
             <td className={tdClass}><Delta presupuestado={subtotalVarsPresupuestado} real={subtotalVarsReal} /></td>
           </tr>
+          {otrosDiarios > 0 && (
+            <tr>
+              <td className={tdClass}>Otros gastos registrados</td>
+              <td className={tdClass}>$0</td>
+              <td className={tdClass}>{formatearMXN(otrosDiarios)}</td>
+              <td className={tdClass}><Delta presupuestado={0} real={otrosDiarios} /></td>
+            </tr>
+          )}
           <tr className="font-bold text-base border-t-2 border-gray-200">
             <td className="py-3 text-left">TOTAL</td>
             <td className="py-3 text-right">{formatearMXN(totalPresupuestado)}</td>

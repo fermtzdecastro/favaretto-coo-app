@@ -169,7 +169,7 @@ export async function GET(request: Request) {
 
   const { error } = await resend.emails.send({
     from: 'Favaretto COO <onboarding@resend.dev>',
-    to: ['fermtzdecastro@gmail.com'],
+    to: ['ivana@favaretto.shoes', 'favaretto.ivana@gmail.com'],
     subject: `Reporte semanal Favaretto — ${hoy.toLocaleDateString('es-MX', { month: 'long', year: 'numeric' })}`,
     html,
   });

@@ -14,9 +14,11 @@ const UNIDADES = ['pieza', 'par', 'metro', 'kg', 'litro', 'rollo', 'caja', 'otro
 
 interface FormularioGastoProps {
   onGastoGuardado?: () => void;
+  conceptosFijos?: string[];
+  conceptosVariables?: string[];
 }
 
-export function FormularioGasto({ onGastoGuardado }: FormularioGastoProps) {
+export function FormularioGasto({ onGastoGuardado, conceptosFijos = [], conceptosVariables = [] }: FormularioGastoProps) {
   const router = useRouter();
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -76,11 +78,27 @@ export function FormularioGasto({ onGastoGuardado }: FormularioGastoProps) {
 
   return (
     <form onSubmit={guardarGasto} className="space-y-5">
-      <div>
+     <div>
         <label className="block text-sm font-medium text-text-main mb-1">Concepto</label>
-        <input type="text" value={concepto} onChange={(e) => setConcepto(e.target.value)}
-          placeholder="Ej. Piel, renta del taller, comisión tarjeta..."
-          className="w-full rounded-xl border border-cream-dark bg-surface px-3 py-2 text-sm" />
+        {(() => {
+          const opciones = categoria === 'fijo' ? conceptosFijos : conceptosVariables;
+          return (
+            <>
+              <select value={opciones.includes(concepto) ? concepto : 'otro'}
+                onChange={(e) => setConcepto(e.target.value === 'otro' ? '' : e.target.value)}
+                className="w-full rounded-xl border border-cream-dark bg-surface px-3 py-2 text-sm">
+                <option value="">Selecciona un concepto</option>
+                {opciones.map((c) => <option key={c} value={c}>{c}</option>)}
+                <option value="otro">Otro (escribir nuevo)</option>
+              </select>
+              {!opciones.includes(concepto) && (
+                <input type="text" value={concepto} onChange={(e) => setConcepto(e.target.value)}
+                  placeholder="Escribe el concepto nuevo"
+                  className="mt-2 w-full rounded-xl border border-cream-dark bg-surface px-3 py-2 text-sm" />
+              )}
+            </>
+          );
+        })()}
       </div>
 
       <div>

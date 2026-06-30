@@ -3,13 +3,13 @@
 import { useEffect, useState } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 
-type Humor = 'feliz' | 'neutral' | 'triste' | 'enojado';
+type Humor = 'feliz' | 'neutral' | 'triste' | 'desesperado';
 
 function getHumor(diasSinActividad: number): Humor {
   if (diasSinActividad <= 2) return 'feliz';
   if (diasSinActividad <= 4) return 'neutral';
   if (diasSinActividad <= 7) return 'triste';
-  return 'enojado';
+  return 'desesperado';
 }
 
 function Monito({ humor }: { humor: Humor }) {
@@ -17,21 +17,21 @@ function Monito({ humor }: { humor: Humor }) {
     feliz: '🥰',
     neutral: '😐',
     triste: '😢',
-    enojado: '😤',
+    desesperado: '🥺',
   };
 
   const mensajes: Record<Humor, string> = {
     feliz: '¡Vas muy bien! Tus datos están al día 🎉',
     neutral: 'Llevas unos días sin registrar. ¡No te olvides!',
     triste: 'Ya tengo una semana sin saber de ti... ¿todo bien?',
-    enojado: '¡Oye! ¡Llevo más de una semana esperando tus datos! 😤 ¡Registra algo YA!',
+    desesperado: 'Aiúrame que tengo muchos quereceres. ¡Registra algo plis!',
   };
 
   const colores: Record<Humor, string> = {
     feliz: '#4A7C59',
     neutral: '#C9A227',
     triste: '#C9956E',
-    enojado: '#B5443A',
+    desesperado: '#B5443A',
   };
 
   return (
