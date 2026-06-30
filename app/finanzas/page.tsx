@@ -53,6 +53,7 @@ export default async function FinanzasPage() {
       </div>
 
       <FloatingActionButton href="/ventas/nueva" label="Registrar venta" />
+      <FloatingActionButton href="/gastos/nueva" label="Registrar gasto" offset={60} />
     </main>
   );
 }
